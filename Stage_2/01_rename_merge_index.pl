@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 use strict;
-use lib '~/bioperl-live/lib/Bio/';
+use lib '/usr/local/ensembl72/bioperl-live';
 use Bio::SeqIO;
 
 ### ENVIRONMENT VARIABLES - change as necessary
