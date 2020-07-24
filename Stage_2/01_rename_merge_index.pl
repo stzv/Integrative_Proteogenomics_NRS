@@ -16,7 +16,7 @@ my $seqout = Bio::SeqIO->new( -file => '>NRS.fa', -format =>'fasta' );	## output
 my $seqio  = Bio::SeqIO->new( -file => $contigs_in);	## input file
 while ( my $seq = $seqio->next_seq ) {
     my $id = $seq->display_id;
-    $id =~ 'NRS' . $id;	# Add target keyword
+    $id =~ s/^(>)/NRS_/;	# Add target keyword
     print $id;	
 #    $id =~ s/\_length.*//g;
     $seq->display_id($id);
