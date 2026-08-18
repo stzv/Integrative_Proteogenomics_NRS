@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+- family-names: "Zverinova"
+  given-names: "Stepanka"
+  orcid: "https://orcid.org/0000-0002-3370-9484"
+- family-names: "Guryev"
+  given-names: "Victor"
+  orcid: "https://orcid.org/0000-0002-5810-6022"
+- family-names: "Horvatovich"
+  given-names: "Peter"
+  orcid: "https://orcid.org/0000-0003-2218-1140"
+title: "Integrative_Proteogenomics_NRS"
+version: 1.0.0
+doi: TBD
+date-released: 2026-08-18
+url: "https://github.com/stzv/Integrative_Proteogenomics_NRS"
