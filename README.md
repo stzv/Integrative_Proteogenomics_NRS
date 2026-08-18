@@ -1,8 +1,4 @@
-# Integrative Proteogenomic Analysis of Non-Reference Sequences
-
-## Overview
-
-This repository contains the analysis workflows used for the identification, characterization, genomic localization, transcriptional profiling, proteomic validation, disease association analysis, and functional prioritization of non-reference sequences (NRS) discovered in the SABE cohort.
+# Integrative Proteogenomic Analysis of Non-Reference Sequences (NRS)
 
 The repository accompanies the study:
 
@@ -10,7 +6,30 @@ The repository accompanies the study:
 
 **DOI:** TO BE ADDED AFTER PUBLICATION
 
-The analyses are organized into individual pipelines, each documented in its own README file.
+## Table of Contents
+
+- #overview
+- [Authors
+- #correspondence
+- [repository-structure
+  - [01_NRS_assembly
+  - [02_Addition_HESMSV_to_UN](#02_addition_hesmsvocations
+  - [04_Comparison_Public_data
+  - #05_nrs_rna
+  - [06_ORf_prediction
+  - #07_lc_msms_analysis
+  - [08_Proteogenomics_Identification]  - #09_nrs_lung_diseases
+  - #10_potentially_functional_nrs
+- #workflow-overview
+- #dependencies
+- #citation
+- #license
+- [Versioning
+- [FAIR Statement](#fair-stvailability
+
+## Overview
+
+This repository contains the analysis workflows used for the identification, characterization, genomic localization, transcriptional profiling, proteomic validation, disease association analysis, and functional prioritization of non-reference sequences (NRS) discovered in the SABE cohort.
 
 ---
 
@@ -19,25 +38,22 @@ The analyses are organized into individual pipelines, each documented in its own
 ### Stepanka Zverinova
  
 University Medical Center Groningen (UMCG)
- 
-ORCID:
+
 https://orcid.org/0000-0002-3370-9484
  
 ### Victor Guryev
  
 University Medical Center Groningen (UMCG)
  
-ORCID:
 https://orcid.org/0000-0002-5810-6022
  
 ### Peter Horvatovich
  
 University Medical Center Groningen (UMCG)
  
-ORCID:
 https://orcid.org/0000-0003-2218-1140
  
-### Correspondence
+## Correspondence
  
 For questions regarding:
  
@@ -299,11 +315,16 @@ See the LICENSE file for the full license text.
 
 ## Versioning
 
-This repository is maintained primarily as a research archive accompanying the publication:
+First public repository release accompanying manuscript
+publication.
+ 
+The repository represents the analytical workflows used
+during the study. Future updates, if any, are expected to
+consist primarily of documentation improvements, bug fixes,
+or post-publication corrections.
 
-**Integrative proteogenomic analysis of non-reference sequences**
-
-The repository is not currently developed as an actively released software package.
+The repository is not currently developed as an actively 
+released software package.
 
 ### Version History
 
