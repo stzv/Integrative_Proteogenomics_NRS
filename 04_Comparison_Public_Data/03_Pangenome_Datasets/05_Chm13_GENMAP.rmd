@@ -1,0 +1,160 @@
+
+
+#### Load packages
+```{r}
+#### Load packages
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+if (!requireNamespace("karyoploteR", quietly = TRUE))
+    install.packages("karyoploteR")
+
+library(karyoploteR)
+library(stringr)
+library(GenomicRanges)
+library(dplyr)
+library(tidyr)
+library("scales")
+library("grid")
+library("RColorBrewer")
+library(corrplot)
+library(circlize)
+```
+
+#### Load in NRS lengths
+```{r}
+#### Load in NRS lengths
+ctg_lengths <- read.csv("ctg_lengths.txt")
+
+# Prepare NRS with Chm13 locations (and no other GENMAP)
+chm13_reg <- read.csv("04_NRS_only_Chm13.txt", sep = "\t", col.names = c("NRS", "Location")) # nolint
+chm13_reg[c("chr", "pos")] <- str_split_fixed(chm13_reg$Location, ":", 2)
+chm13_reg$chr <- paste0("chr", chm13_reg$chr)
+chm13_reg <- merge(chm13_reg, ctg_lengths, by = "NRS")
+chm13_reg$end <- as.numeric(chm13_reg$pos) + as.numeric(chm13_reg$Length)
+```
+
+#### Create GRange
+```{r}
+#### Create GRange
+chm13_range <- GRanges(seqnames = chm13_reg$chr,
+                        ranges = IRanges(start = as.numeric(chm13_reg$pos),
+                                        end = chm13_reg$end)
+                        )
+```
+
+#### Set up KaryoPlotter environment
+```{r}
+#### Set up KaryoPlotter environment
+## Graph preparation
+# https://kasperdanielhansen.github.io/genbioconductor/html/GenomicRanges_GRanges_Usage.html
+# https://bernatgel.github.io/karyoploter_tutorial//Examples/GeneDensity/GeneDensity.html
+# color_centromere = c("#E8E8E8","#E8E8E8","#E8E8E8","#E8E8E8","#E8E8E8","#E8E8E8","#E8E8E8","#E8E8E8","#E8E8E8","#E8E8E8","#E8E8E8","#E8E8E8")
+# names(color_centromere) <- c("gneg","gpos25","gpos33","gpos50","gpos66","gpos75","gpos100","gpos","stalk","acen","gvar","border")
+
+# border_colors <- c("#f02a2d", "#4f64ff")
+# colfunc <- colorRampPalette(border_colors)
+# blues <- colfunc(10)
+
+# https://bernatgel.github.io/karyoploter_tutorial//Tutorial/PlotParams/PlotParams.html
+#pp <- getDefaultPlotParams(plot.type = 1)
+#pp$topmargin <- 10
+#pp$bottommargin <- 100
+#pp$leftmargin <- 0.05
+#pp$rightmargin <- 0.5
+#pp$ideogramheight <- 75
+
+#xl <- 0.9
+#yb <- 0.2
+#xr <- 0.85
+#yt <- 0.45
+
+## Centromeres & gaps
+#https://github.com/marbl/CHM13 -> Cytobands
+#  remake into text, add header (chr	start	end	name	gieStain)
+
+#centr_ranges <- toGRanges("chm13v2.0_cytobands_allchrs.txt")
+#centromeres <- centr_ranges[centr_ranges$gieStain == "acen"]
+
+# https://genome.ucsc.edu/ -> Group "mapping and sequencing", track "gap",
+#  keep only column Chr, Start, End, & Type
+grch38_gaps <- toGRanges("hg38_gap.txt")
+
+##
+color_NRS <- "green"
+color_gaps <- "black"
+```
+
+#### Plotting the ideogram
+```{r}
+#### Plotting the ideogram - position of NRS on Chm13 chromosomes
+png("NRS_only_Chm13.png", width = 10, height = 10,
+    units = "cm", res=1200)
+
+## Create ideogram
+kp <- plotKaryotype("hg38",
+                    plot.type = 2,
+                    #plot.params = pp,
+                    cytobands = NULL, 
+                    labels.plotter = NULL,
+                    #chromosomes = c("chr13", "chr14", "chr15")  ## For testing purposes
+                    )
+
+
+## Chromosome labels
+kpAddChromosomeNames(kp,
+                    chr.names = c(1:22, "X", "Y"),
+                    cex = 0.7,
+                    #srt = -90,
+                    xoffset = -0.01,
+                    yoffset = 10)
+
+## Plot centromeres as gray regions
+# kpPlotRegions(
+#   kp, data = centromeres,
+#   r0 = 0, r1 = 1,
+#   col = color_centromeres, border = NA)
+
+## Plot GRCh38 reference gaps (missing sequence)
+kpPlotRegions(
+  kp,
+  data = grch38_gaps,
+  r0 = 0.0,
+  r1 = 1.0,
+  col = alpha(color_gaps),
+  border = NA
+)
+
+### Plot NRS mapped through alignment with CHM13
+kpPlotRegions(kp,
+            data = chm13_range,
+            avoid.overlapping = FALSE,
+            r0 = 0.3,
+            r1 = 0.05,
+            col = color_NRS
+            )
+
+## Add legend
+legend(
+  "bottomright",
+  legend = c(
+    "CHM13-only NRS",
+    "GRCh38 gap",
+    "Centromere"
+  ),
+  fill = c(
+    color_NRS,
+    alpha(color_gaps),
+    alpha(color_centromeres)
+  ),
+  border = NA,
+  cex = 0.5,
+  bty = "n"
+)
+
+
+dev.off()
+
+# Command line to convert pdf to png (current version of R does not support png)
+#system("pdftoppm NRS_only_Chm13.pdf 05_NRS_only_Chm13 -png")
+```
