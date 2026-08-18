@@ -264,17 +264,19 @@ The repository primarily uses:
 - Samtools
 - BLAST
 
-### Common Python libraries
+### List of dependencies
+This repository contains multiple independent workflows
+developed during the project and therefore does not
+provide a single global software environment.
 
-- pandas
-- numpy
-- matplotlib
-- seaborn
-- Biopython
-- pysam
-- upsetplot
+A consolidated list of commonly used dependencies is
+provided in:
 
-A consolidated list of Python dependencies is provided in the repository `requirements.txt` file.
+- requirements.txt (Python)
+- R_packages.txt (R)
+
+Pipeline-specific dependencies are documented in the
+README file associated with each workflow.
 
 ---
 
