@@ -1,0 +1,18 @@
+# Consolidated Python dependencies used throughout the repository.
+# Individual pipelines may require only a subset of these packages.
+#
+# This repository contains multiple independent workflows.
+# Pipeline-specific requirements are documented in the
+# README associated with each workflow.
+
+biopython
+matplotlib
+matplotlib-venn
+more-itertools
+numpy
+pandas
+pysam
+regex
+scipy
+seaborn
+upsetplot
