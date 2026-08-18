@@ -8,24 +8,15 @@ The repository accompanies the study:
 
 ## Table of Contents
 
-- #overview
-- [Authors
-- #correspondence
-- [repository-structure
-  - [01_NRS_assembly
-  - [02_Addition_HESMSV_to_UN](#02_addition_hesmsvocations
-  - [04_Comparison_Public_data
-  - #05_nrs_rna
-  - [06_ORf_prediction
-  - #07_lc_msms_analysis
-  - [08_Proteogenomics_Identification]  - #09_nrs_lung_diseases
-  - #10_potentially_functional_nrs
-- #workflow-overview
-- #dependencies
-- #citation
-- #license
-- [Versioning
-- [FAIR Statement](#fair-stvailability
+- Overview
+- Authors & Correspondence
+- Repository structure
+- Workflow overview
+- Dependencies
+- Citation
+- License
+- Versioning
+- FAIR Statement
 
 ## Overview
 
@@ -34,7 +25,7 @@ This repository contains the analysis workflows used for the identification, cha
 ---
 
 ## Authors
- 
+
 ### Stepanka Zverinova
  
 University Medical Center Groningen (UMCG)
@@ -53,7 +44,7 @@ University Medical Center Groningen (UMCG)
  
 https://orcid.org/0000-0003-2218-1140
  
-## Correspondence
+### Correspondence
  
 For questions regarding:
  
