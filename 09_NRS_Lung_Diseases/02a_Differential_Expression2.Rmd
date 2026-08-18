@@ -1,0 +1,284 @@
+```{r}
+#BiocManager::install("edgeR")
+#BiocManager::install("GO.db")
+library("edgeR")
+library("pheatmap")
+library(dplyr)
+library(ggplot2)
+library(ggrepel)
+```
+
+```{r}
+# Clean up environment
+rm(list = ls())
+
+
+#############################################################################
+#### INPUT
+tissue <- "Presto"
+
+count_infile <- paste("20230417_", tissue, "_SABE2_rawcounts.txt", sep = "")
+inf_infile <- paste("Patient_Information_", tissue, ".txt", sep = "")
+#### PROCESS
+# Load in counts
+counts <- read.delim(count_infile, row.names = 1)
+# Load in sample information
+sample_information <- read.delim(inf_infile, row.names = 1)
+# Keep only counts of samples that should be kept
+samples_to_be_kept <- row.names(sample_information)
+counts <- counts[, samples_to_be_kept]
+# Keep only necessary columns
+sample_information <- sample_information[ , c("Sex", "Age", "Classification", "Smoker")] #nolint
+
+# Get Control samples
+control_samples <- row.names(sample_information[sample_information$Classification == "Control", ]) #nolint
+# Get disease samples
+disease_samples <- row.names(sample_information[!sample_information$Classification == "Control", ]) #nolint
+# Get name of disease
+disease <- unique(sample_information[!sample_information$Classification == "Control", "Classification"]) #nolint
+# Get total number of samples
+sample_count <- length(colnames(sample_information))
+# Get the grouping information
+group <- factor(sample_information$Classification,
+                levels = c("Control", disease))
+
+##
+# Create DGE object
+counts_dge <- DGEList(counts = counts, group = group, genes = row.names(counts))
+# Filter out low expressed genes
+counts_per_million <- cpm(counts_dge, normalized.lib.sizes = TRUE)
+# FIlter low expression
+# At least 1 CPM in at least half of either group
+
+control_group_cpm <- counts_per_million[, control_samples] # Control CPMs #nolint
+disease_group_cpm <- counts_per_million[, disease_samples] # Disease CPMs #nolint
+
+count_check_control <- control_group_cpm >= 1 # Check if CPM >= 1
+count_check_disease <- disease_group_cpm >= 1 # Check if CPM >= 1
+check_control <- rowSums(count_check_control) >= (length(control_samples) / 2) # CPM >= 1 in half of group #nolint
+check_disease <- rowSums(count_check_disease) >= (length(disease_samples) / 2) # CPM >= 1 in half of group #nolint
+                
+# NRS with >= 100 reads count
+check_nrs <-  rowSums(counts) >= 100 & grepl("k141", row.names(counts))
+#
+keep <- which(check_control | check_disease | check_nrs)
+
+counts_dge <- counts_dge[keep, , keep.lib.sizes = FALSE]
+
+counts_dge$samples$group <- relevel(counts_dge$samples$group, ref = "Control")
+# Normalize
+counts_dge <- calcNormFactors(counts_dge)
+plotMDS(counts_dge, col = as.numeric(counts_dge$samples$group))
+dev.off()
+# Define model
+design <- model.matrix(~ group + Sex + Age,
+                        data = sample_information)
+colnames(design)
+# Calculate dispersions
+counts_dge <- estimateDisp(counts_dge, design)
+#
+fit <- glmQLFit(counts_dge,
+                design = design,
+                dispersion = counts_dge$tagwise.dispersion)
+
+## COPD vs Control
+qlf <- glmQLFTest(fit, coef = paste("group", disease, sep = ""))
+tt <- topTags(qlf, n = "all", sort.by = "p.value")
+
+write.table(tt,
+            paste("02_Genes", tissue, "COPDvsControl.txt", sep = "_"),
+            quote = FALSE, sep = "\t", row.names = FALSE)
+
+tt <- tt[tt$table["FDR"] <= 0.05, ]
+
+# Gene IDs
+# Set up Biomart
+httr::set_config(httr::config(ssl_verifypeer = FALSE))
+mart <- biomaRt::useMart(biomart = "ENSEMBL_MART_ENSEMBL",
+                         dataset = "hsapiens_gene_ensembl",
+                         host = "https://www.ensembl.org")
+
+genes <- biomaRt::getBM(filters = "ensembl_gene_id",
+                        attributes = c("ensembl_gene_id",
+                                        "hgnc_symbol",
+                                        "description"),
+                        values = tt$table["genes"],
+                        mart = mart)
+tt2 <- merge(tt, genes,
+             by.x = "genes", by.y = "ensembl_gene_id",
+             all.x = TRUE, sort = FALSE)
+tt2$description <- gsub("\\[Source:HGNC Symbol;Acc:HGNC:(.*)\\]",
+                        "",
+                        tt2$description)
+#
+write.table(tt2[order(tt2["FDR"], decreasing = FALSE), ],
+            paste("02_DEGenes", tissue, "COPDvsControl.txt", sep = "_"),
+            quote = FALSE, sep = "\t", row.names = FALSE)
+
+
+```
+
+```{r}
+# Volcano plot
+tt2$expression <- "Unchanged"
+tt2$expression[tt2$logFC >= 0 & tt2$FDR <= 0.05] <- "Up regulated"
+tt2$expression[tt2$logFC <= 0 & tt2$FDR <= 0.05] <- "Down regulated"
+
+tt2$class <- "Annotated gene"
+tt2$class[grepl("k141", tt2$genes)] <- "NRS"
+
+labs_row <- data.frame(x = tt2$genes)
+labs_row$y <- row.names(labs_row)
+labs_row$y[!grepl("k141", tt2$genes)] <- ""
+
+write.table(labs_row[grepl("k141", labs_row$x), ],
+            paste("02_DEGenes", tissue, "COPDvsControl_NRSLabels.txt", sep = "_"),
+            quote = FALSE, sep = "\t", row.names = FALSE, col.names = FALSE)
+
+pdf(paste("02_VolcanoPlot", tissue, "COPDvsControl.pdf", sep = "_"))
+ggplot(tt2, aes(logFC, -log(FDR, 10), group = class)) +
+    geom_point(aes(color = expression, shape = class), size = 1) +
+    scale_color_manual(values = c("firebrick3", "gray50", "dodgerblue3")) +
+    scale_shape_manual(values = c(20, 4)) +
+    scale_size_manual(values = c(1, 5)) +
+    geom_text(aes(label = labs_row$y),
+                    hjust = 0,
+                    vjust = 1,
+                    size = 2) +
+    guides(colour = guide_legend(override.aes = list(size = 1.5))) +
+    ggtitle(tissue)
+dev.off()
+
+```
+
+```{r}
+# Heatmap
+colors <- colorRampPalette(c("red", "white", "navy"))(30)
+
+ann_colors <- list(
+    Sex = c("m" = "blue", "f" = "red"),
+    Annotation = c("NRS" = "blue", "Gene" = "gray")
+)
+
+breaks <- seq(-5, 5, length.out = 30)
+
+sample_annotation <- sample_information[order(sample_information$Classification, sample_information$Sex), ] #nolint
+
+de_counts <- counts_per_million[tt2$genes, ]
+
+g_nrs <- ifelse(grepl("k141", row.names(de_counts)), "NRS", "Gene")
+
+labs_row <- data.frame(x = row.names(de_counts))
+labs_row$y <- row.names(labs_row)
+labs_row$y[!grepl("k141", row.names(de_counts))] <- ""
+
+
+gene_annotation <- data.frame(x = row.names(de_counts),
+                              Annotation = g_nrs, #nolint
+                              row.names = row.names(de_counts)
+                              )
+
+
+pdf(file = paste("02_Heatmap", tissue, "COPDvsControl.pdf", sep = "_"))
+pheatmap(de_counts[, row.names(sample_annotation)],
+         scale = "row", breaks = breaks,
+         cluster_rows = TRUE, cluster_cols = FALSE,
+         clustering_distance_rows = "correlation",
+         show_rownames = TRUE, show_colnames = FALSE,
+         labels_row = labs_row$y,
+         fontsize = 5, fontsize_row = 5,
+         main = "Disease", color = colors,
+         annotation_col = sample_annotation[c("Sex", "Classification")],
+         annotation_row = gene_annotation["Annotation"],
+         annotation_colors = ann_colors
+         )
+dev.off()
+
+pdf(file = paste("02_Heatmap", tissue, "COPDvsControl_ClusterPatients.pdf", sep = "_"))
+pheatmap(de_counts[, row.names(sample_annotation)],
+         scale = "row", breaks = breaks,
+         cluster_rows = TRUE, cluster_cols = TRUE,
+         clustering_distance_rows = "correlation",
+         show_rownames = TRUE, show_colnames = FALSE,
+         labels_row = labs_row$y,
+         fontsize = 5, fontsize_row = 5,
+         main = "Disease", color = colors,
+         annotation_col = sample_annotation[c("Sex", "Classification")],
+         annotation_row = gene_annotation["Annotation"],
+         annotation_colors = ann_colors
+         )
+dev.off()
+while (!is.null(dev.list()))  dev.off()
+```
+
+```{r}
+# Cluster analysis
+cluster_count <- 20
+out <- pheatmap(de_counts[, row.names(sample_annotation)],
+         scale = "row", breaks = breaks,
+         cluster_rows = TRUE, cluster_cols = TRUE,
+         clustering_distance_rows = "correlation",
+         cutree_rows = cluster_count,
+         show_rownames = TRUE, show_colnames = FALSE,
+         labels_row = labs_row$y,
+         fontsize = 5, fontsize_row = 5,
+         main = "Disease", color = colors,
+         annotation_col = sample_annotation[c("Sex", "Classification")],
+         annotation_row = gene_annotation["Annotation"],
+         annotation_colors = ann_colors
+         )
+
+
+cluster_order <- rownames(de_counts[out$tree_row[["order"]], ])
+cluter_groups <- cutree(out$tree_row, k = cluster_count)[cluster_order]
+keep_cols <- c("genes", "logFC", "FDR", "hgnc_symbol", "description")
+row.names(tt2) <- tt2$genes
+heatmap_order <- tt2[cluster_order, keep_cols]
+heatmap_order$cluster <- cluter_groups
+write.table(heatmap_order,
+            paste("02_DEGenes", tissue, "COPDvsControl_HeatmapClusters_NRS.txt",
+                    sep = "_"),
+            quote = FALSE, sep = "\t", row.names = FALSE)
+
+gene_annotation <- data.frame(x = row.names(de_counts),
+                              Annotation = g_nrs, #nolint
+                              row.names = row.names(de_counts),
+                              cluster = as.factor(cluter_groups)
+                              )
+
+library(RColorBrewer)
+n <- cluster_count
+qual_col_pals <- brewer.pal.info[brewer.pal.info$category == 'qual', ]
+col_vector <- unlist(mapply(brewer.pal, qual_col_pals$maxcolors, rownames(qual_col_pals)))
+
+colors <- colorRampPalette(c("red", "white", "navy"))(30)
+
+ann_colors <- list(
+    Sex = c("m" = "blue", "f" = "red"),
+    Classification = c("Control" = "blue", "COPD" = "red"),
+    Annotation = c("NRS" = "blue", "Gene" = "gray"),
+    cluster = col_vector
+)
+
+pdf(file = paste("02_Heatmap", tissue, "COPDvsControl_Clusters_NRS.pdf", sep = "_"))
+pheatmap(de_counts[ , row.names(sample_annotation)],
+         scale = "row", breaks = breaks,
+         cluster_rows = TRUE, cluster_cols = TRUE,
+         clustering_distance_rows = "correlation",
+         cutree_rows = cluster_count,
+         show_rownames = TRUE, show_colnames = FALSE,
+         #labels_row = row.names(de_counts[grepl("k141", row.names(de_counts)), ]),
+         labels_row = labs_row$y,
+         fontsize = 5, fontsize_row = 5,
+         main = "Disease", color = colors,
+         annotation_col = sample_annotation[c("Sex", "Classification")],
+         annotation_row = gene_annotation["Annotation"],
+         annotation_colors = ann_colors
+         )
+dev.off()
+
+```
+
+```{r}
+while (!is.null(dev.list()))  dev.off()
+```
