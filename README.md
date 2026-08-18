@@ -17,6 +17,7 @@ The repository accompanies the study:
 - License
 - Versioning
 - FAIR Statement
+- Data Availability
 
 ## Overview
 
