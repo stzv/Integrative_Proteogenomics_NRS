@@ -1,0 +1,14 @@
+biomaRt
+circlize
+corrplot
+dplyr
+edgeR
+GenomicRanges
+ggplot2
+ggrepel
+karyoploteR
+pheatmap
+RColorBrewer
+scales
+stringr
+tidyr
