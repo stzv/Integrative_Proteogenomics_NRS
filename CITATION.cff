@@ -12,6 +12,6 @@ authors:
   orcid: "https://orcid.org/0000-0003-2218-1140"
 title: "Integrative_Proteogenomics_NRS"
 version: 1.0.0
-doi: TBD
+doi: https://doi.org/10.5281/zenodo.22025890
 date-released: 2026-08-18
 url: "https://github.com/stzv/Integrative_Proteogenomics_NRS"
